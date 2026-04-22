@@ -1,0 +1,14 @@
+{
+  "name": "streamflow-notification-service",
+  "version": "1.0.0",
+  "description": "Serviço de notificações — simula envio de alertas",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "fastify": "^5.8.5",
+    "pino-pretty": "^13.1.3"
+  }
+}

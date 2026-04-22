@@ -1,0 +1,157 @@
+# StreamFlow — Plataforma de Streaming (Arquitetura de Microsserviços)
+# Disciplina: Serviços Web (PF_CC.44) — IFSul, Campus Passo Fundo
+#
+# Para subir todos os serviços:
+#   docker compose up --build
+#
+# Para ver logs de um serviço específico:
+#   docker compose logs -f <nome-do-servico>
+
+services:
+  # ── API Gateway ──────────────────────────────────────────────
+  gateway:
+    build: ./gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - auth-service
+      - catalog-service
+      - streaming-service
+      - recommendation-service
+      - notification-service
+      - billing-service
+      - analytics-service
+    environment:
+      - PORT=8080
+      - AUTH_SERVICE_URL=http://auth-service:3001
+      - CATALOG_SERVICE_URL=http://catalog-service:3002
+      - STREAMING_SERVICE_URL=http://streaming-service:3003
+      - RECOMMENDATION_SERVICE_URL=http://recommendation-service:3004
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3005
+      - BILLING_SERVICE_URL=http://billing-service:3006
+      - ANALYTICS_SERVICE_URL=http://analytics-service:3007
+      - JWT_PUBLIC_KEY_PATH=/app/keys/public.pem
+    volumes:
+      - ./keys:/app/keys:ro
+    networks:
+      - streamflow-net
+
+  # ── Auth Service ─────────────────────────────────────────────
+  auth-service:
+    build: ./services/auth
+    expose:
+      - "3001"
+    environment:
+      - PORT=3001
+      - DB_PATH=/app/data/auth.db
+      - JWT_PRIVATE_KEY_PATH=/app/keys/private.pem
+    volumes:
+      - auth-data:/app/data
+      - ./keys:/app/keys:ro
+    networks:
+      - streamflow-net
+
+  # ── Catalog Service ──────────────────────────────────────────
+  catalog-service:
+    build: ./services/catalog
+    expose:
+      - "3002"
+    environment:
+      - PORT=3002
+      - DB_PATH=/app/data/catalog.db
+      - JWT_PUBLIC_KEY_PATH=/app/keys/public.pem
+    volumes:
+      - catalog-data:/app/data
+      - ./keys:/app/keys:ro
+    networks:
+      - streamflow-net
+
+  # ── Streaming Service ────────────────────────────────────────
+  streaming-service:
+    build: ./services/streaming
+    expose:
+      - "3003"
+    environment:
+      - PORT=3003
+      - DB_PATH=/app/data/streaming.db
+      - CATALOG_SERVICE_URL=http://catalog-service:3002
+      - RECOMMENDATION_SERVICE_URL=http://recommendation-service:3004
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3005
+      - JWT_PUBLIC_KEY_PATH=/app/keys/public.pem
+    volumes:
+      - streaming-data:/app/data
+      - ./keys:/app/keys:ro
+    networks:
+      - streamflow-net
+
+  # ── Recommendation Service ───────────────────────────────────
+  recommendation-service:
+    build: ./services/recommendation
+    expose:
+      - "3004"
+    environment:
+      - PORT=3004
+      - DB_PATH=/app/data/recommendation.db
+      - JWT_PUBLIC_KEY_PATH=/app/keys/public.pem
+    volumes:
+      - recommendation-data:/app/data
+      - ./keys:/app/keys:ro
+    networks:
+      - streamflow-net
+
+  # ── Notification Service ─────────────────────────────────────
+  # NOTA: Este serviço NÃO possui banco de dados próprio.
+  #       Ele é chamado de forma síncrona no fluxo de play.
+  notification-service:
+    build: ./services/notification
+    expose:
+      - "3005"
+    environment:
+      - PORT=3005
+    networks:
+      - streamflow-net
+
+  # ── Billing Service ──────────────────────────────────────────
+  billing-service:
+    build: ./services/billing
+    expose:
+      - "3006"
+    environment:
+      - PORT=3006
+      - DB_PATH=/app/data/shared_billing.db
+      - JWT_PUBLIC_KEY_PATH=/app/keys/public.pem
+    volumes:
+      - shared-billing-data:/app/data
+      - ./keys:/app/keys:ro
+    networks:
+      - streamflow-net
+
+  # ── Analytics Service ────────────────────────────────────────
+  # NOTA: Este serviço compartilha o MESMO volume de dados
+  #       do billing-service (shared-billing-data).
+  analytics-service:
+    build: ./services/analytics
+    expose:
+      - "3007"
+    environment:
+      - PORT=3007
+      - DB_PATH=/app/data/shared_billing.db
+      - JWT_PUBLIC_KEY_PATH=/app/keys/public.pem
+    volumes:
+      - shared-billing-data:/app/data
+      - ./keys:/app/keys:ro
+    networks:
+      - streamflow-net
+
+# ── Volumes ──────────────────────────────────────────────────
+volumes:
+  auth-data:
+  catalog-data:
+  streaming-data:
+  recommendation-data:
+  shared-billing-data:   # Compartilhado entre billing e analytics
+
+# ── Rede interna ─────────────────────────────────────────────
+networks:
+  streamflow-net:
+    driver: bridge
