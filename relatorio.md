@@ -107,8 +107,11 @@ Abaixo, um exemplo de como o seu fluxo de play (o mais problemático) ficaria si
     };
 
 Por que isso é melhor?
+
 Código Limpo: Sumiram as URLs de fetch e os blocos try/catch repetitivos.
+
 Performance: O uso de ctx.emit (eventos) garante que o usuário receba o "Play" instantaneamente, enquanto as tarefas secundárias rodam em background.
+
 Segurança: Se o serviço de catálogo estiver fora, o Moleculer nem tenta a chamada (Circuit Breaker), respondendo imediatamente com um erro tratado.
 
 
