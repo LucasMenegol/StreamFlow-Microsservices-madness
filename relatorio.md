@@ -80,7 +80,8 @@ Justificativa: Migrar tudo agora seria adicionar mais uma camada de complexidade
 ### 4. Prova de Conceito (PoC): Streaming Service em Moleculer
 Abaixo, um exemplo de como o seu fluxo de play (o mais problemático) ficaria simplificado e protegido com Moleculer:
 // services/streaming.service.js
-module.exports = {
+
+    module.exports = {
     name: "streaming",
     actions: {
         async play(ctx) {
@@ -103,7 +104,7 @@ module.exports = {
             return { status: "playing", movie: license.title };
         }
     }
-};
+    };
 
 Por que isso é melhor?
 Código Limpo: Sumiram as URLs de fetch e os blocos try/catch repetitivos.
