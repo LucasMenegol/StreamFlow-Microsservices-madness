@@ -60,4 +60,54 @@ O Perigo: Ele esconde a complexidade. Se o transporte de mensagens do Moleculer 
 
 Recomendação: Não migrar agora. Primeiro, devemos simplificar a arquitetura (consolidar serviços). Migrar para um framework complexo agora só aumentaria o problema de "conhecimento oculto" que o Marcos mencionou.
 
+# Tarefa Bonús
+
+### 1. O que o Moleculer resolve de graça
+O Moleculer não é apenas uma biblioteca, mas um ecossistema completo que automatiza a "cola" (o encanamento) entre os microsserviços. No nosso cenário atual, ele resolveria:
+Service Discovery & Registry: Hoje, o streaming-service precisa saber a URL exata do notification-service. No Moleculer, os serviços se autodescobrem. Se subirmos 10 instâncias, elas se registram sozinhas.
+Resiliência Integrada (Fault Tolerance): Ele possui Circuit Breaker, Retries e Timeouts nativos. Se o notification-service ficar lento (como vimos nos testes), o Moleculer corta a comunicação automaticamente para não travar o streaming-service.
+Balanceamento de Carga: Ele distribui as requisições entre instâncias usando estratégias como Round-Robin ou baseadas em latência/uso de CPU, sem precisar de um Load Balancer externo complexo.
+Observabilidade Unificada: O framework já vem com exporters para Jaeger/Zipkin (Tracing) e Prometheus (Métricas). Isso resolve diretamente a "cegueira" que tivemos nos últimos incidentes, permitindo rastrear o caminho de um "Play" do início ao fim.
+Transporte Flexível: Podemos trocar a comunicação HTTP (lenta) por NATS, Redis ou Kafka apenas mudando uma linha de configuração, sem mexer na lógica de negócio.
+### 2. O que o Moleculer esconde
+Seguindo o argumento do vídeo "Microservices at Scale", o Moleculer introduz uma abstração de rede que pode ser perigosa:
+A "Mágica" do Local vs. Remoto: O Moleculer faz uma chamada para um serviço em outro servidor parecer uma chamada de função local (broker.call("service.action")). Isso esconde o fato de que existe uma rede instável no meio. O desenvolvedor pode esquecer que aquela linha de código pode falhar por problemas de infraestrutura.
+Acoplamento ao Framework: Ao adotar o Moleculer, o código deixa de ser "Node.js puro" e passa a depender fortemente da estrutura de actions, events e methods do framework. É o chamado Vendor Lock-in de software.
+Debug de Middleware: Como ele intercepta todas as chamadas para injetar métricas e validações, se houver um erro no transporte de dados, o stack trace pode ser confuso, dificultando encontrar se o erro é no seu código ou na configuração do framework.
+### 3. Recomendação: O Veredito
+Minha recomendação para a StreamFlow é: Adotar Parcialmente (Fase de Transição).
+Justificativa: Migrar tudo agora seria adicionar mais uma camada de complexidade em um momento de crise. No entanto, o Moleculer é ideal para resolver o nosso problema de Observabilidade e Resiliência. Sugiro iniciarmos a migração pelo Gateway e pelo Streaming Service, que são os pontos de maior dor, mantendo os serviços menores em Fastify até que a equipe domine a ferramenta. Isso nos daria o tracing que o Rafael e a Camila levaram embora, sem exigir um rewrite total imediato.
+### 4. Prova de Conceito (PoC): Streaming Service em Moleculer
+Abaixo, um exemplo de como o seu fluxo de play (o mais problemático) ficaria simplificado e protegido com Moleculer:
+// services/streaming.service.js
+module.exports = {
+    name: "streaming",
+    actions: {
+        async play(ctx) {
+            const { movieId, userId } = ctx.params;
+
+            // 1. Verificação de Licença (Síncrona, mas com Circuit Breaker nativo)
+            const license = await ctx.call("catalog.getLicense", { movieId });
+            if (!license.active) throw new Error("Sem licença!");
+
+            // 2. Registro de Recomendação (ASSÍNCRONO - resolvendo o antipattern)
+            // O emit não bloqueia a resposta para o usuário
+            ctx.emit("recommendation.viewed", { userId, movieId });
+
+            // 3. Notificação (ASSÍNCRONO com Retry automático se falhar)
+            ctx.emit("notification.send", {
+                userId,
+                message: `Iniciando: ${license.title}`
+            });
+
+            return { status: "playing", movie: license.title };
+        }
+    }
+};
+
+Por que isso é melhor?
+Código Limpo: Sumiram as URLs de fetch e os blocos try/catch repetitivos.
+Performance: O uso de ctx.emit (eventos) garante que o usuário receba o "Play" instantaneamente, enquanto as tarefas secundárias rodam em background.
+Segurança: Se o serviço de catálogo estiver fora, o Moleculer nem tenta a chamada (Circuit Breaker), respondendo imediatamente com um erro tratado.
+
 
