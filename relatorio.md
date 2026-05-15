@@ -51,15 +51,6 @@ Analogia no StreamFlow: Nosso Analytics-Service é o exemplo perfeito. Ele faz u
 
 Ação: Mover a lógica de Analytics para dentro do Billing como um módulo interno.
 
-Tarefa Bônus: Análise do Moleculer.js
-Se você for entregar o bônus, aqui estão os pontos-chave:
-
-O que resolve: Ele já traz o Circuit Breaker (se o Notification cair, ele para de tentar chamá-lo automaticamente) e o Service Discovery (os serviços se acham sem precisar de URLs fixas no Docker).
-
-O Perigo: Ele esconde a complexidade. Se o transporte de mensagens do Moleculer falhar, a equipe terá ainda mais dificuldade de depurar do que com o Fastify atual.
-
-Recomendação: Não migrar agora. Primeiro, devemos simplificar a arquitetura (consolidar serviços). Migrar para um framework complexo agora só aumentaria o problema de "conhecimento oculto" que o Marcos mencionou.
-
 # Tarefa Bonús
 
 ### 1. O que o Moleculer resolve de graça
