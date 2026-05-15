@@ -14,7 +14,7 @@ O Overhead: Estimamos que a equipe gaste 60% do tempo mantendo a "cola" entre os
 
 Proposta: Consolidação. O Analytics-Service e o Billing-Service já compartilham o mesmo banco de dados (Antipattern detectado!). Eles devem ser fundidos em um único serviço de "Finanças", reduzindo custos de container e complexidade de rede.
 
-### Seção 2 — Latência de Rede (O "Gargalo do Play")
+### Seção 2 — Latência de Rede
 Diagnóstico: O fluxo de "Play" é o coração do sistema e hoje ele é frágil.
 
 Evidência: Em nossos testes, o POST /streaming/play levou cerca de 1.5s. Uma chamada simples ao catálogo leva apenas 0.011s.
